@@ -53,7 +53,10 @@ function validateBody(body: GenerateRequest) {
 
 function parseJsonResponse(text: string): string[] {
   // Strip markdown code fences
-  const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  const cleaned = text
+    .replace(/```json\s*/g, "")
+    .replace(/```\s*/g, "")
+    .trim();
   try {
     const parsed = JSON.parse(cleaned) as { responses?: unknown };
     if (Array.isArray(parsed.responses)) {
@@ -71,11 +74,11 @@ function parseJsonResponse(text: string): string[] {
     while ((match = regex.exec(text)) !== null) {
       results.push(match[1].trim());
     }
-    // Remove the JSON key "responses" if captured (it's too short or exact match)
+    // Remove the JSON key "responses" if captured
     const filtered = results.filter((r) => r !== "responses");
     if (filtered.length >= 2) return filtered.slice(0, 3);
 
-    // Last resort: try numbered items
+    // Last resort: numbered items
     const lines = text.split("\n");
     const fallback: string[] = [];
     for (const line of lines) {
@@ -124,30 +127,34 @@ ${comments.map((comment) => `- ${comment}`).join("\n")}
 
 Ton demand\u00e9 : ${toneLabels[tone]} (${tone})`;
 
-  const modelToUse = process.env.LLM_MODEL || "anthropic/claude-sonnet-4-20250514";
+  // Use a cheap+fast model for reply generation
+  const modelToUse = "anthropic/claude-sonnet-4";
 
   try {
-    const llmResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://replyforge.staging.myapp.technology",
-        "X-Title": "ReplyForge",
-      },
-      body: JSON.stringify({
-        model: modelToUse,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt.replace("{tone}", toneLabels[tone]),
-          },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.9,
-        max_tokens: 600,
-      }),
-    });
+    const llmResponse = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://replyforge.staging.myapp.technology",
+          "X-Title": "ReplyForge",
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt.replace("{tone}", toneLabels[tone]),
+            },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0.9,
+          max_tokens: 600,
+        }),
+      }
+    );
 
     const data = (await llmResponse.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
@@ -157,7 +164,7 @@ Ton demand\u00e9 : ${toneLabels[tone]} (${tone})`;
     if (!llmResponse.ok) {
       return jsonError(
         data.error?.message ?? "Erreur LLM pendant la g\u00e9n\u00e9ration.",
-        llmResponse.status,
+        llmResponse.status
       );
     }
 
@@ -171,7 +178,10 @@ Ton demand\u00e9 : ${toneLabels[tone]} (${tone})`;
 
     if (responses.length < 2) {
       console.error("LLM response could not be parsed:", content);
-      return jsonError("R\u00e9ponse LLM invalide ou incompl\u00e8te.", 502);
+      return jsonError(
+        "R\u00e9ponse LLM invalide ou incompl\u00e8te.",
+        502
+      );
     }
 
     // Pad to 3 if needed

@@ -23,6 +23,11 @@ const toneLabels: Record<1 | 2 | 3, string> = {
   2: "Cash",
   3: "Nucléaire",
 };
+const toneDescriptions: Record<1 | 2 | 3, string> = {
+  1: "troll subtil",
+  2: "condescendant assumé",
+  3: "full trash méprisant",
+};
 
 function parseComments(value: string) {
   return value
@@ -228,14 +233,16 @@ export default function Home() {
           <textarea
             value={directive}
             onChange={(event) => setDirective(event.target.value)}
-            placeholder="Ex: Mets en avant la complexité technique, taquine le commentaire avec ironie, répond avec une stat choc..."
+            placeholder="Ex: Attaque l'angle technique, répond en mockant la logique, sois ultra court..."
             className="min-h-20 resize-y rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-base text-gray-100 outline-none transition placeholder:text-gray-600 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30"
           />
         </label>
 
         <div className="grid gap-3 rounded-xl border border-gray-800 bg-gray-950 p-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-gray-200">Ton</span>
+            <span className="text-sm font-semibold text-gray-200">
+              Level Trash
+            </span>
             <span className="rounded-full bg-amber-500 px-3 py-1 text-sm font-bold text-gray-950">
               {toneLabels[tone]}
             </span>

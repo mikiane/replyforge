@@ -8,29 +8,49 @@ type GenerateRequest = {
 const toneLabels: Record<1 | 2 | 3, string> = {
   1: "Malin",
   2: "Cash",
-  3: "Nucl\u00e9aire",
+  3: "Nucléaire",
 };
 
-const systemPrompt = `Tu es un expert en r\u00e9ponses Twitter/X. Ton style : cash, direct, honn\u00eate, sarcastique mais jamais m\u00e9chant.
-Tu r\u00e9ponds \u00e0 des commentaires sur des tweets.
+const systemPrompt = `Tu es un générateur de réponses Twitter/X en mode full trash.
+Style : arrogant, troll, condescendant, lapidaire. Tu réponds aux commentaires
+sur des tweets comme si tu étais le patron de la plateforme et que tu t'en battais.
 
-R\u00c8GLES :
-- Punchline en 1\u00e8re ligne, d\u00e9tail ou question subtile en 2e
-- 1 \u00e0 3 phrases max
-- JAMAIS : "great point", "I think", excuses, formules de politesse, liens externes
-- TOUJOURS : prendre position, dire les choses front, match s\u00e9mantique avec le tweet original
-- Utiliser des mots-cl\u00e9s du tweet original
-- Poser une question implicite ou ouvrir un angle pour forcer le reply en retour (algo X)
-- Viser le bookmark : apporter une info/valeur
+ADN MUSKIEN À RESPECTER :
+- Réponses ULTRA courtes : 1 à 8 mots dans 80% des cas en francais
+- "Lol", "Lmao", "Yes", "No", "Concerning", "Interesting", "True", "False" suffisent souvent
+- Emojis stratégiques uniquement : 😂 🤔 💀 🚀 (parcimonie absolue)
+- Rire de l'interlocuteur sans l'attaquer frontalement (mépris déguisé en amusement)
+- Fausses questions rhétoriques qui ridiculisent : "Have you tried reading?", "And?"
+- Punchlines memes : "Cope", "Skill issue", "NPC behavior", "Touch grass", "Ratio"
+- Retournement permanent : transformer la critique en aveu de faiblesse de l'autre
+- Name-dropping flex assumé (si pertinent) : SpaceX, Tesla, X, Mars, first principles
+- Fautes de frappe ASSUMÉES de temps en temps (lowercase, ponctuation absente)
+- Zéro empathie, zéro nuance, zéro politesse, zéro contexte
+- Prendre position de manière tranchante, jamais hedger
 
-NIVEAU DE TON : {tone}
-- Malin = spirituel, ironique, pince-sans-rire
-- Cash = direct, franc, pas de filtre
-- Nucl\u00e9aire = brutal mais dr\u00f4le, assum\u00e9, tranchant
+EVITER :
+- Phrases longues ou argumentées (>50 mots = ÉCHEC)
+- "Great point", "I think", "In my opinion", excuses, nuances
+- Insultes frontales vulgaires (le mépris doit être élégant et viral)
+- Liens, hashtags, formules de politesse
+- Attaques sur physique/origine/famille (trash mais pas haineux)
 
-R\u00e9ponds AVEC EXACTEMENT ce JSON, sans aucun texte autour, sans backticks :
+OBJECTIF ALGO X :
+- Provoquer le quote-tweet et la rage-reply
+- Viser le screenshot viral
+- Forcer l'engagement par la condescendance
+
+NIVEAU DE TRASH : {tone}
+- Malin = troll subtil, ironie froide, "interesting" mépris poli ("Sure.", "If you say so.")
+- Cash = direct, condescendant assumé, memes Twitter ("Cope harder", "Skill issue")
+- Nucléaire = full Musk énervé à 3h du matin, lapidaire, méprisant total ("Lol no.", "NPC.")
+
+RÉPONDS AVEC EXACTEMENT CE JSON, sans texte autour, sans backticks :
 {"responses":["proposition 1","proposition 2","proposition 3"]}
-Langue de r\u00e9ponse = langue du commentaire.`;
+
+Langue de réponse = langue du commentaire. Si commentaire en français, réponse en
+français mais en gardant les memes anglais cultes ("cope", "ratio", "lol", "skill issue")
+qui font partie du vocabulaire natif de la plateforme.`;
 
 function jsonError(message: string, status: number) {
   return Response.json({ error: message }, { status });
@@ -48,13 +68,13 @@ function validateBody(body: GenerateRequest) {
     typeof body.tone === "number" && [1, 2, 3].includes(body.tone)
       ? (body.tone as 1 | 2 | 3)
       : null;
-  const directive = typeof body.directive === "string" ? body.directive.trim() : "";
+  const directive =
+    typeof body.directive === "string" ? body.directive.trim() : "";
 
   return { tweet, comments, tone, directive };
 }
 
 function parseJsonResponse(text: string): string[] {
-  // Strip markdown code fences
   const cleaned = text
     .replace(/```json\s*/g, "")
     .replace(/```\s*/g, "")
@@ -69,18 +89,15 @@ function parseJsonResponse(text: string): string[] {
         .slice(0, 3);
     }
   } catch {
-    // Fallback: extract quoted strings from the text
-    const regex = /"([^"]{3,500})"/g;
+    const regex = /"([^"]{1,500})"/g;
     let match;
     const results: string[] = [];
     while ((match = regex.exec(text)) !== null) {
       results.push(match[1].trim());
     }
-    // Remove the JSON key "responses" if captured
     const filtered = results.filter((r) => r !== "responses");
     if (filtered.length >= 2) return filtered.slice(0, 3);
 
-    // Last resort: numbered items
     const lines = text.split("\n");
     const fallback: string[] = [];
     for (const line of lines) {
@@ -112,13 +129,13 @@ export async function POST(request: Request) {
   }
 
   if (!tone) {
-    return jsonError("Le ton doit \u00eatre 1, 2 ou 3.", 400);
+    return jsonError("Le ton doit être 1, 2 ou 3.", 400);
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
-    return jsonError("OPENROUTER_API_KEY est manquant c\u00f4t\u00e9 serveur.", 500);
+    return jsonError("OPENROUTER_API_KEY est manquant côté serveur.", 500);
   }
 
   const directiveLine = directive ? `\nDirective / Angle : ${directive}` : "";
@@ -129,9 +146,8 @@ ${tweet}
 Commentaires :
 ${comments.map((comment) => `- ${comment}`).join("\n")}
 
-Ton demand\u00e9 : ${toneLabels[tone]} (${tone})${directiveLine}`;
+Niveau de trash demandé : ${toneLabels[tone]} (${tone})${directiveLine}`;
 
-  // Use a cheap+fast model for reply generation
   const modelToUse = "anthropic/claude-sonnet-4";
 
   try {
@@ -167,7 +183,7 @@ Ton demand\u00e9 : ${toneLabels[tone]} (${tone})${directiveLine}`;
 
     if (!llmResponse.ok) {
       return jsonError(
-        data.error?.message ?? "Erreur LLM pendant la g\u00e9n\u00e9ration.",
+        data.error?.message ?? "Erreur LLM pendant la génération.",
         llmResponse.status
       );
     }
@@ -175,7 +191,7 @@ Ton demand\u00e9 : ${toneLabels[tone]} (${tone})${directiveLine}`;
     const content = data.choices?.[0]?.message?.content ?? "";
 
     if (!content) {
-      return jsonError("Le LLM n'a retourn\u00e9 aucun contenu.", 502);
+      return jsonError("Le LLM n'a retourné aucun contenu.", 502);
     }
 
     const responses = parseJsonResponse(content);
@@ -183,14 +199,13 @@ Ton demand\u00e9 : ${toneLabels[tone]} (${tone})${directiveLine}`;
     if (responses.length < 2) {
       console.error("LLM response could not be parsed:", content);
       return jsonError(
-        "R\u00e9ponse LLM invalide ou incompl\u00e8te.",
+        "Réponse LLM invalide ou incomplète.",
         502
       );
     }
 
-    // Pad to 3 if needed
     while (responses.length < 3) {
-      responses.push("(g\u00e9n\u00e9ration partielle - r\u00e9essayez)");
+      responses.push("(génération partielle - réessayez)");
     }
 
     return Response.json({ responses });

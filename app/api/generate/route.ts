@@ -2,6 +2,7 @@ type GenerateRequest = {
   tweet?: unknown;
   comments?: unknown;
   tone?: unknown;
+  directive?: unknown;
 };
 
 const toneLabels: Record<1 | 2 | 3, string> = {
@@ -47,8 +48,9 @@ function validateBody(body: GenerateRequest) {
     typeof body.tone === "number" && [1, 2, 3].includes(body.tone)
       ? (body.tone as 1 | 2 | 3)
       : null;
+  const directive = typeof body.directive === "string" ? body.directive.trim() : "";
 
-  return { tweet, comments, tone };
+  return { tweet, comments, tone, directive };
 }
 
 function parseJsonResponse(text: string): string[] {
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
     return jsonError("JSON invalide.", 400);
   }
 
-  const { tweet, comments, tone } = validateBody(body);
+  const { tweet, comments, tone, directive } = validateBody(body);
 
   if (!tweet) {
     return jsonError("Le tweet est requis.", 400);
@@ -119,13 +121,15 @@ export async function POST(request: Request) {
     return jsonError("OPENROUTER_API_KEY est manquant c\u00f4t\u00e9 serveur.", 500);
   }
 
+  const directiveLine = directive ? `\nDirective / Angle : ${directive}` : "";
+
   const userMessage = `Tweet original :
 ${tweet}
 
 Commentaires :
 ${comments.map((comment) => `- ${comment}`).join("\n")}
 
-Ton demand\u00e9 : ${toneLabels[tone]} (${tone})`;
+Ton demand\u00e9 : ${toneLabels[tone]} (${tone})${directiveLine}`;
 
   // Use a cheap+fast model for reply generation
   const modelToUse = "anthropic/claude-sonnet-4";

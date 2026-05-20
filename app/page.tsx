@@ -7,6 +7,7 @@ type HistoryItem = {
   tweet: string;
   comments: string[];
   tone: 1 | 2 | 3;
+  directive: string;
   createdAt: number;
   responses: string[];
 };
@@ -76,6 +77,7 @@ function loadHistory() {
 export default function Home() {
   const [tweet, setTweet] = useState("");
   const [commentsText, setCommentsText] = useState("");
+  const [directive, setDirective] = useState("");
   const [tone, setTone] = useState<1 | 2 | 3>(2);
   const [responses, setResponses] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -126,6 +128,7 @@ export default function Home() {
           tweet: tweet.trim(),
           comments,
           tone,
+          directive: directive.trim() || undefined,
         }),
       });
 
@@ -147,6 +150,7 @@ export default function Home() {
         tweet: tweet.trim(),
         comments,
         tone,
+        directive: directive.trim(),
         createdAt: Date.now(),
         responses: nextResponses,
       };
@@ -177,6 +181,7 @@ export default function Home() {
     setTweet(item.tweet);
     setCommentsText(item.comments.join("\n"));
     setTone(item.tone);
+    setDirective(item.directive ?? "");
     setResponses(item.responses);
     setError("");
     setCopiedIndex(null);
@@ -200,7 +205,7 @@ export default function Home() {
             value={tweet}
             onChange={(event) => setTweet(event.target.value)}
             placeholder="Colle le tweet ici..."
-            className="min-h-36 resize-y rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-base text-gray-100 outline-none transition placeholder:text-gray-600 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30"
+            className="min-h-28 resize-y rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-base text-gray-100 outline-none transition placeholder:text-gray-600 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30"
           />
         </label>
 
@@ -212,7 +217,19 @@ export default function Home() {
             value={commentsText}
             onChange={(event) => setCommentsText(event.target.value)}
             placeholder="@user: texte du commentaire... (un par ligne)"
-            className="min-h-36 resize-y rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-base text-gray-100 outline-none transition placeholder:text-gray-600 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30"
+            className="min-h-28 resize-y rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-base text-gray-100 outline-none transition placeholder:text-gray-600 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30"
+          />
+        </label>
+
+        <label className="grid gap-2">
+          <span className="text-sm font-semibold text-gray-200">
+            Directive / Angle (optionnel)
+          </span>
+          <textarea
+            value={directive}
+            onChange={(event) => setDirective(event.target.value)}
+            placeholder="Ex: Mets en avant la complexité technique, taquine le commentaire avec ironie, répond avec une stat choc..."
+            className="min-h-20 resize-y rounded-xl border border-gray-800 bg-gray-950 px-4 py-3 text-base text-gray-100 outline-none transition placeholder:text-gray-600 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30"
           />
         </label>
 
@@ -316,6 +333,11 @@ export default function Home() {
                   <span className="rounded-full bg-gray-800 px-2 py-1 text-amber-300">
                     {toneLabels[item.tone]}
                   </span>
+                  {item.directive ? (
+                    <span className="rounded-full bg-gray-800 px-2 py-1 text-gray-300">
+                      {truncateTweet(item.directive)}
+                    </span>
+                  ) : null}
                   <span>{formatRelativeTime(item.createdAt)}</span>
                 </span>
               </button>

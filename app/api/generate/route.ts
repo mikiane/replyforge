@@ -27,7 +27,7 @@ NIVEAU DE TON : {tone}
 - Cash = direct, franc, pas de filtre
 - Nucl\u00e9aire = brutal mais dr\u00f4le, assum\u00e9, tranchant
 
-R\u00e9ponds EXCLUSIVEMENT en JSON valide avec ce format, SANS markdown, SANS backticks, SANS texte autour :
+R\u00e9ponds AVEC EXACTEMENT ce JSON, sans aucun texte autour, sans backticks :
 {"responses":["proposition 1","proposition 2","proposition 3"]}
 Langue de r\u00e9ponse = langue du commentaire.`;
 
@@ -52,7 +52,7 @@ function validateBody(body: GenerateRequest) {
 }
 
 function parseJsonResponse(text: string): string[] {
-  // Strip markdown code fences if present
+  // Strip markdown code fences
   const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
   try {
     const parsed = JSON.parse(cleaned) as { responses?: unknown };
@@ -64,18 +64,25 @@ function parseJsonResponse(text: string): string[] {
         .slice(0, 3);
     }
   } catch {
-    // Fallback: try to extract numbered items
-    const lines = text.split("\n");
+    // Fallback: extract quoted strings from the text
+    const regex = /"([^"]{3,500})"/g;
+    let match;
     const results: string[] = [];
+    while ((match = regex.exec(text)) !== null) {
+      results.push(match[1].trim());
+    }
+    // Remove the JSON key "responses" if captured (it's too short or exact match)
+    const filtered = results.filter((r) => r !== "responses");
+    if (filtered.length >= 2) return filtered.slice(0, 3);
+
+    // Last resort: try numbered items
+    const lines = text.split("\n");
+    const fallback: string[] = [];
     for (const line of lines) {
-      const match = line.match(/^\d+\.\s+(.+)$/);
-      if (match && match[1].trim()) {
-        results.push(match[1].trim());
-      }
+      const m = line.match(/^\d+[\.\)]\s+(.+)$/);
+      if (m && m[1].trim()) fallback.push(m[1].trim());
     }
-    if (results.length >= 2) {
-      return results.slice(0, 3);
-    }
+    if (fallback.length >= 2) return fallback.slice(0, 3);
   }
   return [];
 }
@@ -117,6 +124,8 @@ ${comments.map((comment) => `- ${comment}`).join("\n")}
 
 Ton demand\u00e9 : ${toneLabels[tone]} (${tone})`;
 
+  const modelToUse = process.env.LLM_MODEL || "anthropic/claude-sonnet-4-20250514";
+
   try {
     const llmResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -127,9 +136,12 @@ Ton demand\u00e9 : ${toneLabels[tone]} (${tone})`;
         "X-Title": "ReplyForge",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-nano",
+        model: modelToUse,
         messages: [
-          { role: "system", content: systemPrompt.replace("{tone}", toneLabels[tone]) },
+          {
+            role: "system",
+            content: systemPrompt.replace("{tone}", toneLabels[tone]),
+          },
           { role: "user", content: userMessage },
         ],
         temperature: 0.9,
@@ -150,9 +162,15 @@ Ton demand\u00e9 : ${toneLabels[tone]} (${tone})`;
     }
 
     const content = data.choices?.[0]?.message?.content ?? "";
+
+    if (!content) {
+      return jsonError("Le LLM n'a retourn\u00e9 aucun contenu.", 502);
+    }
+
     const responses = parseJsonResponse(content);
 
     if (responses.length < 2) {
+      console.error("LLM response could not be parsed:", content);
       return jsonError("R\u00e9ponse LLM invalide ou incompl\u00e8te.", 502);
     }
 
